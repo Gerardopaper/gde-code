@@ -31,7 +31,7 @@ def test_fcc_init_scaffolds_user_config(
         check=False,
     )
     assert result.returncode == 0, result.stderr or result.stdout
-    assert (tmp_path / ".config" / "free-claude-code" / ".env").is_file()
+    assert (tmp_path / ".config" / "gde-code" / ".env").is_file()
 
 
 def test_free_claude_code_entrypoint_starts_server(smoke_config: SmokeConfig) -> None:
@@ -64,7 +64,7 @@ def test_claude_cli_prompt_when_available(
         if smoke_config.settings.anthropic_auth_token:
             env["ANTHROPIC_AUTH_TOKEN"] = smoke_config.settings.anthropic_auth_token
         result = subprocess.run(
-            [claude_bin, "-p", "Reply with exactly FCC_SMOKE_PONG"],
+            [claude_bin, "-p", "Reply with exactly GDEC_SMOKE_PONG"],
             cwd=tmp_path,
             env=env,
             capture_output=True,
@@ -77,7 +77,7 @@ def test_claude_cli_prompt_when_available(
     assert "POST /v1/messages" in server_log, (
         "Claude CLI did not call the local Anthropic-compatible endpoint"
     )
-    if "FCC_SMOKE_PONG" not in result.stdout:
+    if "GDEC_SMOKE_PONG" not in result.stdout:
         skip_upstream_unavailable(
             "Claude CLI reached the local proxy but returned no smoke token"
         )

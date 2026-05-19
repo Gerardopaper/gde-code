@@ -75,7 +75,7 @@ def test_provider_disconnect_e2e(smoke_config: SmokeConfig) -> None:
 
 def test_provider_error_e2e(smoke_config: SmokeConfig) -> None:
     provider_model = ProviderMatrixDriver(smoke_config).first_model()
-    broken_model = f"{provider_model.provider}/fcc-smoke-missing-model"
+    broken_model = f"{provider_model.provider}/gdec-smoke-missing-model"
     with (
         SmokeServerDriver(
             smoke_config,
@@ -87,7 +87,7 @@ def test_provider_error_e2e(smoke_config: SmokeConfig) -> None:
             f"{server.base_url}/v1/messages",
             headers=auth_headers(),
             json={
-                "model": "fcc-smoke-default",
+                "model": "gdec-smoke-default",
                 "max_tokens": 32,
                 "messages": [{"role": "user", "content": "hello"}],
             },
@@ -232,7 +232,7 @@ def _scenario_interleaved_history(
                         "type": "tool_use",
                         "id": "toolu_interleaved",
                         "name": "echo_smoke",
-                        "input": {"value": "FCC_INTERLEAVED"},
+                        "input": {"value": "GDEC_INTERLEAVED"},
                     },
                 ],
             },
@@ -242,7 +242,7 @@ def _scenario_interleaved_history(
                     {
                         "type": "tool_result",
                         "tool_use_id": "toolu_interleaved",
-                        "content": "FCC_INTERLEAVED",
+                        "content": "GDEC_INTERLEAVED",
                     }
                 ],
             },
@@ -271,7 +271,7 @@ def _scenario_tool_use_then_text_in_history(
                         "type": "tool_use",
                         "id": tool_id,
                         "name": "echo_smoke",
-                        "input": {"value": "FCC_206_SMOKE"},
+                        "input": {"value": "GDEC_206_SMOKE"},
                     },
                     {
                         "type": "text",
@@ -285,7 +285,7 @@ def _scenario_tool_use_then_text_in_history(
                     {
                         "type": "tool_result",
                         "tool_use_id": tool_id,
-                        "content": "FCC_206_SMOKE",
+                        "content": "GDEC_206_SMOKE",
                     },
                 ],
             },
@@ -308,7 +308,7 @@ def _scenario_tool_result_continuation(
         "model": "claude-sonnet-4-5-20250929",
         "max_tokens": 256,
         "messages": [
-            {"role": "user", "content": "Use echo_smoke once with value FCC_TOOL."}
+            {"role": "user", "content": "Use echo_smoke once with value GDEC_TOOL."}
         ],
         "tools": [echo_tool_schema()],
         "tool_choice": {"type": "tool", "name": "echo_smoke"},
@@ -332,7 +332,7 @@ def _scenario_tool_result_continuation(
                         {
                             "type": "tool_result",
                             "tool_use_id": tool_use["id"],
-                            "content": "FCC_TOOL",
+                            "content": "GDEC_TOOL",
                         }
                     ],
                 },
@@ -351,7 +351,7 @@ def _scenario_reasoning_tool_continuation(
         "model": "claude-sonnet-4-5-20250929",
         "max_tokens": 256,
         "messages": [
-            {"role": "user", "content": "Use echo_smoke once with value FCC_TOOL."},
+            {"role": "user", "content": "Use echo_smoke once with value GDEC_TOOL."},
             {
                 "role": "assistant",
                 "content": [
@@ -360,7 +360,7 @@ def _scenario_reasoning_tool_continuation(
                         "type": "tool_use",
                         "id": "toolu_reasoning_smoke",
                         "name": "echo_smoke",
-                        "input": {"value": "FCC_TOOL"},
+                        "input": {"value": "GDEC_TOOL"},
                     },
                 ],
             },
@@ -370,7 +370,7 @@ def _scenario_reasoning_tool_continuation(
                     {
                         "type": "tool_result",
                         "tool_use_id": "toolu_reasoning_smoke",
-                        "content": "FCC_TOOL",
+                        "content": "GDEC_TOOL",
                     }
                 ],
             },
@@ -392,7 +392,7 @@ def _scenario_disconnect(
             f"{server.base_url}/v1/messages",
             headers=auth_headers(),
             json={
-                "model": "fcc-smoke-default",
+                "model": "gdec-smoke-default",
                 "max_tokens": 512,
                 "messages": [{"role": "user", "content": smoke_config.prompt}],
             },

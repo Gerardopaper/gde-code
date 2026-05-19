@@ -336,7 +336,7 @@ FIELDS: tuple[ConfigFieldSpec, ...] = (
         "runtime",
         "secret",
         settings_attr="anthropic_auth_token",
-        default="freecc",
+        default="gdec",
         secret=True,
         description="Protects Claude/API access. It is not admin-page login.",
     ),
@@ -658,85 +658,85 @@ FIELDS: tuple[ConfigFieldSpec, ...] = (
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_MODEL_NVIDIA_NIM",
+        "GDEC_SMOKE_MODEL_NVIDIA_NIM",
         "Smoke NVIDIA NIM Model",
         "smoke",
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_MODEL_OPEN_ROUTER",
+        "GDEC_SMOKE_MODEL_OPEN_ROUTER",
         "Smoke OpenRouter Model",
         "smoke",
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_MODEL_DEEPSEEK",
+        "GDEC_SMOKE_MODEL_DEEPSEEK",
         "Smoke DeepSeek Model",
         "smoke",
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_MODEL_LMSTUDIO",
+        "GDEC_SMOKE_MODEL_LMSTUDIO",
         "Smoke LM Studio Model",
         "smoke",
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_MODEL_LLAMACPP",
+        "GDEC_SMOKE_MODEL_LLAMACPP",
         "Smoke llama.cpp Model",
         "smoke",
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_MODEL_OLLAMA",
+        "GDEC_SMOKE_MODEL_OLLAMA",
         "Smoke Ollama Model",
         "smoke",
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_MODEL_KIMI",
+        "GDEC_SMOKE_MODEL_KIMI",
         "Smoke Kimi Model",
         "smoke",
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_MODEL_WAFER",
+        "GDEC_SMOKE_MODEL_WAFER",
         "Smoke Wafer Model",
         "smoke",
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_MODEL_OPENCODE",
+        "GDEC_SMOKE_MODEL_OPENCODE",
         "Smoke OpenCode Zen Model",
         "smoke",
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_MODEL_ZAI",
+        "GDEC_SMOKE_MODEL_ZAI",
         "Smoke Z.ai Model",
         "smoke",
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_NIM_MODELS",
+        "GDEC_SMOKE_NIM_MODELS",
         "Smoke NIM Models",
         "smoke",
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_NIM_EXTRA_MODELS",
+        "GDEC_SMOKE_NIM_EXTRA_MODELS",
         "Smoke NIM Extra Models",
         "smoke",
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_OPENROUTER_FREE_MODELS",
+        "GDEC_SMOKE_OPENROUTER_FREE_MODELS",
         "Smoke OpenRouter Free Models",
         "smoke",
         advanced=True,
     ),
     ConfigFieldSpec(
-        "FCC_SMOKE_OPENROUTER_FREE_EXTRA_MODELS",
+        "GDEC_SMOKE_OPENROUTER_FREE_EXTRA_MODELS",
         "Smoke OpenRouter Free Extra Models",
         "smoke",
         advanced=True,
@@ -753,9 +753,9 @@ def repo_env_path() -> Path:
 
 
 def explicit_env_path() -> Path | None:
-    """Return the explicit FCC_ENV_FILE path, when configured."""
+    """Return the explicit GDEC_ENV_FILE path, when configured."""
 
-    if explicit := os.environ.get("FCC_ENV_FILE"):
+    if explicit := os.environ.get("GDEC_ENV_FILE"):
         return Path(explicit)
     return None
 

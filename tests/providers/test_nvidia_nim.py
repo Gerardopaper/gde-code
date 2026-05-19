@@ -207,7 +207,7 @@ def test_preflight_and_build_request_issue_206_post_tool_text(nim_provider):
                         type="tool_use",
                         id=tool_id,
                         name="echo_smoke",
-                        input={"value": "FCC_206"},
+                        input={"value": "GDEC_206"},
                     ),
                     MockBlock(
                         type="text",
@@ -219,7 +219,7 @@ def test_preflight_and_build_request_issue_206_post_tool_text(nim_provider):
                 "user",
                 [
                     MockBlock(
-                        type="tool_result", tool_use_id=tool_id, content="FCC_206"
+                        type="tool_result", tool_use_id=tool_id, content="GDEC_206"
                     ),
                     MockBlock(type="text", text="What was echoed?"),
                 ],
@@ -716,7 +716,7 @@ async def test_stream_response_retries_without_reasoning_content(nim_provider):
                         type="tool_use",
                         id="toolu_reasoning",
                         name="echo_smoke",
-                        input={"value": "FCC_TOOL"},
+                        input={"value": "GDEC_TOOL"},
                     ),
                 ],
             )

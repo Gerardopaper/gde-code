@@ -39,7 +39,7 @@ function sourceLabel(source) {
     template: "template",
     repo_env: "repo .env",
     managed_env: "",
-    explicit_env_file: "FCC_ENV_FILE",
+    explicit_env_file: "GDEC_ENV_FILE",
     process: "process env",
   };
   return Object.prototype.hasOwnProperty.call(labels, source) ? labels[source] : source;

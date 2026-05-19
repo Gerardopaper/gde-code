@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "free-claude-code"
+name = "gde-code"
 version = "2.0.0"
 description = "Middleware between Claude Code CLI (Anthropic API) and NVIDIA NIM"
 readme = "README.md"
@@ -26,7 +26,7 @@ dependencies = [
 
 [project.scripts]
 gdec-server = "cli.entrypoints:serve"
-free-claude-code = "cli.entrypoints:serve"
+gde-code = "cli.entrypoints:serve"
 gdec-init = "cli.entrypoints:init"
 gdec-claude = "cli.entrypoints:launch_claude"
 
@@ -113,7 +113,7 @@ markers = [
     "clients: client compatibility checks",
     "voice: voice transcription checks",
     "contract: deterministic feature contract checks",
-    "smoke_target(name): route a smoke test behind FCC_SMOKE_TARGETS",
+    "smoke_target(name): route a smoke test behind GDEC_SMOKE_TARGETS",
 ]
 
 [tool.ty.environment]

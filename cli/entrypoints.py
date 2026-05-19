@@ -24,7 +24,7 @@ from cli.process_registry import (
     register_pid,
     unregister_pid,
 )
-from config.paths import config_dir_path, legacy_env_paths, managed_env_path
+from config.paths import config_dir_path, managed_env_path
 from config.settings import Settings, get_settings
 
 PROXY_PREFLIGHT_PATH = "/health"
@@ -53,7 +53,6 @@ def serve() -> None:
     try:
         try:
             while True:
-                _migrate_legacy_env_if_missing()
                 settings = get_settings()
                 if not _run_supervised_server(
                     settings, open_admin_browser=not opened_admin_browser
@@ -68,9 +67,9 @@ def serve() -> None:
 
 
 def _admin_browser_open_enabled() -> bool:
-    """Whether to open /admin when the server becomes reachable (FCC_OPEN_BROWSER)."""
+    """Whether to open /admin when the server becomes reachable (GDEC_OPEN_BROWSER)."""
 
-    raw = os.environ.get("FCC_OPEN_BROWSER", "true").strip().lower()
+    raw = os.environ.get("GDEC_OPEN_BROWSER", "true").strip().lower()
     return raw not in {"", "0", "false", "no"}
 
 
@@ -92,7 +91,7 @@ def _schedule_open_admin_browser(settings: Settings) -> None:
             time.sleep(0.15)
 
     threading.Thread(
-        target=open_when_ready, name="fcc-open-admin-browser", daemon=True
+        target=open_when_ready, name="gdec-open-admin-browser", daemon=True
     ).start()
 
 
@@ -127,17 +126,9 @@ def _run_supervised_server(settings: Settings, *, open_admin_browser: bool) -> b
 
 
 def init() -> None:
-    """Scaffold config at ~/.fcc/.env (registered as `gdec-init`)."""
+    """Scaffold config at ~/.gdec/.env (registered as `gdec-init`)."""
     config_dir = config_dir_path()
     env_file = managed_env_path()
-
-    migrated_from = _migrate_legacy_env_if_missing()
-    if migrated_from is not None:
-        print(f"Config migrated from {migrated_from} to {env_file}")
-        print(
-            "Edit it to set your API keys and model preferences, then run: gdec-server"
-        )
-        return
 
     if env_file.exists():
         print(f"Config already exists at {env_file}")
@@ -149,24 +140,6 @@ def init() -> None:
     env_file.write_text(template, encoding="utf-8")
     print(f"Config created at {env_file}")
     print("Edit it to set your API keys and model preferences, then run: gdec-server")
-
-
-def _migrate_legacy_env_if_missing() -> Path | None:
-    """Copy a legacy user env into the managed config path when absent."""
-
-    env_file = managed_env_path()
-    if env_file.exists():
-        return None
-
-    # TODO: Remove after the ~/.fcc/.env migration has had a release cycle.
-    for legacy_env in legacy_env_paths():
-        if not legacy_env.is_file():
-            continue
-        env_file.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(legacy_env, env_file)
-        return legacy_env
-
-    return None
 
 
 def _claude_child_env(

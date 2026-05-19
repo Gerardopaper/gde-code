@@ -61,7 +61,7 @@ FEATURE_INVENTORY: tuple[FeatureCoverage, ...] = (
         ("test_provider_text_multiturn_e2e",),
         ("providers",),
         ("configured provider credentials or local provider endpoint",),
-        "missing providers are missing_env unless FCC_ALLOW_NO_PROVIDER_SMOKE=1",
+        "missing providers are missing_env unless GDEC_ALLOW_NO_PROVIDER_SMOKE=1",
     ),
     FeatureCoverage(
         "drop_in_claude_code_replacement",
@@ -80,7 +80,7 @@ FEATURE_INVENTORY: tuple[FeatureCoverage, ...] = (
         ("api", "cli", "clients", "nvidia_nim_cli", "openrouter_free_cli"),
         (
             "configured provider",
-            "FCC_SMOKE_CLAUDE_BIN for real Claude CLI",
+            "GDEC_SMOKE_CLAUDE_BIN for real Claude CLI",
             "NVIDIA_NIM_API_KEY",
             "OPENROUTER_API_KEY",
         ),
@@ -94,7 +94,7 @@ FEATURE_INVENTORY: tuple[FeatureCoverage, ...] = (
         ("test_configured_provider_models_stream_successfully",),
         ("test_provider_matrix_presence_e2e", "test_provider_text_multiturn_e2e"),
         ("providers",),
-        ("configured provider credentials/endpoints", "optional FCC_SMOKE_MODEL_*"),
+        ("configured provider credentials/endpoints", "optional GDEC_SMOKE_MODEL_*"),
         "selected providers missing credentials are failing missing_env",
     ),
     FeatureCoverage(
@@ -276,7 +276,7 @@ FEATURE_INVENTORY: tuple[FeatureCoverage, ...] = (
             "test_voice_nim_backend_e2e",
         ),
         ("messaging", "voice"),
-        ("VOICE_NOTE_ENABLED", "FCC_SMOKE_RUN_VOICE", "WHISPER_DEVICE"),
+        ("VOICE_NOTE_ENABLED", "GDEC_SMOKE_RUN_VOICE", "WHISPER_DEVICE"),
         "fake cancellation is required; backend transcription is opt-in",
     ),
     FeatureCoverage(
@@ -396,7 +396,7 @@ FEATURE_INVENTORY: tuple[FeatureCoverage, ...] = (
         ),
         ("cli", "nvidia_nim_cli", "openrouter_free_cli"),
         (
-            "FCC_SMOKE_CLAUDE_BIN",
+            "GDEC_SMOKE_CLAUDE_BIN",
             "configured provider",
             "NVIDIA_NIM_API_KEY",
             "OPENROUTER_API_KEY",
@@ -455,7 +455,7 @@ FEATURE_INVENTORY: tuple[FeatureCoverage, ...] = (
     ),
     FeatureCoverage(
         "config_env_precedence",
-        "FCC_ENV_FILE, dotenv, and process env precedence are deterministic",
+        "GDEC_ENV_FILE, dotenv, and process env precedence are deterministic",
         "public_surface",
         ("tests/config/test_config.py",),
         (),
