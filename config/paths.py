@@ -1,4 +1,4 @@
-"""Shared filesystem paths for Free Claude Code configuration."""
+"""Shared filesystem paths for GDE Code configuration."""
 
 from pathlib import Path
 

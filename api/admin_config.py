@@ -1044,7 +1044,7 @@ def render_env_file(values: Mapping[str, str], *, mask_secrets: bool = False) ->
     """Render a complete grouped env file."""
 
     lines: list[str] = [
-        "# Managed by Free Claude Code /admin.",
+        "# Managed by GDE Code /admin.",
         "# Edit in the server UI when possible.",
         "",
     ]

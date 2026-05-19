@@ -421,7 +421,7 @@ async function apply() {
   await load();
   showMessage(
     pending.length
-      ? `Applied. Restart fcc-server to use: ${pending.join(", ")}`
+      ? `Applied. Restart gdec-server to use: ${pending.join(", ")}`
       : "Applied",
     "ok",
   );

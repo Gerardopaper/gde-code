@@ -48,7 +48,7 @@ def _load_env_template() -> str:
 
 
 def serve() -> None:
-    """Start the FastAPI server (registered as `fcc-server` script)."""
+    """Start the FastAPI server (registered as `gdec-server` script)."""
     opened_admin_browser = False
     try:
         try:
@@ -127,7 +127,7 @@ def _run_supervised_server(settings: Settings, *, open_admin_browser: bool) -> b
 
 
 def init() -> None:
-    """Scaffold config at ~/.fcc/.env (registered as `fcc-init`)."""
+    """Scaffold config at ~/.fcc/.env (registered as `gdec-init`)."""
     config_dir = config_dir_path()
     env_file = managed_env_path()
 
@@ -135,7 +135,7 @@ def init() -> None:
     if migrated_from is not None:
         print(f"Config migrated from {migrated_from} to {env_file}")
         print(
-            "Edit it to set your API keys and model preferences, then run: fcc-server"
+            "Edit it to set your API keys and model preferences, then run: gdec-server"
         )
         return
 
@@ -148,7 +148,7 @@ def init() -> None:
     template = _load_env_template()
     env_file.write_text(template, encoding="utf-8")
     print(f"Config created at {env_file}")
-    print("Edit it to set your API keys and model preferences, then run: fcc-server")
+    print("Edit it to set your API keys and model preferences, then run: gdec-server")
 
 
 def _migrate_legacy_env_if_missing() -> Path | None:
@@ -209,16 +209,16 @@ def _preflight_proxy(proxy_root_url: str) -> str | None:
 
 
 def launch_claude(argv: Sequence[str] | None = None) -> None:
-    """Launch Claude Code with Free Claude Code proxy environment variables."""
+    """Launch Claude Code with GDE Code proxy environment variables."""
 
     settings = get_settings()
     proxy_root_url = local_proxy_root_url(settings)
     if error := _preflight_proxy(proxy_root_url):
         print(
-            f"Free Claude Code proxy is not reachable at {proxy_root_url}: {error}",
+            f"GDE Code proxy is not reachable at {proxy_root_url}: {error}",
             file=sys.stderr,
         )
-        print("Start it in another terminal with: fcc-server", file=sys.stderr)
+        print("Start it in another terminal with: gdec-server", file=sys.stderr)
         raise SystemExit(1)
 
     args = list(sys.argv[1:] if argv is None else argv)

@@ -1,4 +1,4 @@
-"""Tests for cli/entrypoints.py — fcc-init scaffolding logic."""
+"""Tests for cli/entrypoints.py — gdec-init scaffolding logic."""
 
 import tomllib
 from pathlib import Path
@@ -140,10 +140,10 @@ def test_init_skips_if_env_already_exists(tmp_path: Path) -> None:
 
 
 def test_init_prints_next_step_hint(tmp_path: Path) -> None:
-    """init() tells the user to run fcc-server after editing .env."""
+    """init() tells the user to run gdec-server after editing .env."""
     output, _ = _run_init(tmp_path)
 
-    assert "fcc-server" in output
+    assert "gdec-server" in output
 
 
 def test_cli_scripts_are_registered() -> None:
@@ -154,9 +154,9 @@ def test_cli_scripts_are_registered() -> None:
     )
 
     scripts = pyproject["project"]["scripts"]
-    assert scripts["fcc-server"] == "cli.entrypoints:serve"
+    assert scripts["gdec-server"] == "cli.entrypoints:serve"
     assert scripts["free-claude-code"] == "cli.entrypoints:serve"
-    assert scripts["fcc-claude"] == "cli.entrypoints:launch_claude"
+    assert scripts["gdec-claude"] == "cli.entrypoints:launch_claude"
 
 
 def test_schedule_open_admin_browser_opens_when_health_ready(
@@ -427,4 +427,4 @@ def test_launch_claude_unreachable_proxy_exits_with_hint(
     run.assert_not_called()
     captured = capsys.readouterr()
     assert "http://127.0.0.1:9393" in captured.err
-    assert "fcc-server" in captured.err
+    assert "gdec-server" in captured.err
