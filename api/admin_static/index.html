@@ -57,6 +57,28 @@
               aria-label="Messaging configuration"
             ></div>
           </section>
+
+          <section
+            id="view-custom_providers"
+            class="admin-view"
+            data-view="custom_providers"
+            hidden
+          >
+            <section class="provider-strip" aria-label="Custom providers">
+              <div class="strip-header">
+                <h3>Custom Providers</h3>
+                <button
+                  id="customProviderAdd"
+                  class="secondary-button"
+                  type="button"
+                >
+                  + Add provider
+                </button>
+              </div>
+              <div id="customProviderList" class="provider-grid"></div>
+            </section>
+            <div id="customProviderFormMount"></div>
+          </section>
         </div>
       </main>
 

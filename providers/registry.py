@@ -10,6 +10,11 @@ from contextlib import suppress
 import httpx
 from loguru import logger
 
+from config.custom_providers import (
+    CustomProviderRecord,
+    get_custom_provider,
+    load_custom_providers,
+)
 from config.provider_catalog import (
     PROVIDER_CATALOG,
     SUPPORTED_PROVIDER_IDS,
@@ -173,19 +178,48 @@ def build_provider_config(
     )
 
 
+def build_custom_provider_config(
+    record: CustomProviderRecord, settings: Settings
+) -> ProviderConfig:
+    """Build a :class:`ProviderConfig` from a user-defined custom provider."""
+    return ProviderConfig(
+        api_key=record.api_key,
+        base_url=record.base_url,
+        rate_limit=settings.provider_rate_limit,
+        rate_window=settings.provider_rate_window,
+        max_concurrency=settings.provider_max_concurrency,
+        http_read_timeout=settings.http_read_timeout,
+        http_write_timeout=settings.http_write_timeout,
+        http_connect_timeout=settings.http_connect_timeout,
+        enable_thinking=settings.enable_model_thinking,
+        proxy="",
+        log_raw_sse_events=settings.log_raw_sse_events,
+        log_api_error_tracebacks=settings.log_api_error_tracebacks,
+    )
+
+
 def create_provider(provider_id: str, settings: Settings) -> BaseProvider:
     descriptor = PROVIDER_DESCRIPTORS.get(provider_id)
-    if descriptor is None:
-        supported = "', '".join(PROVIDER_DESCRIPTORS)
-        raise UnknownProviderTypeError(
-            f"Unknown provider_type: '{provider_id}'. Supported: '{supported}'"
-        )
+    if descriptor is not None:
+        config = build_provider_config(descriptor, settings)
+        factory = PROVIDER_FACTORIES.get(provider_id)
+        if factory is None:
+            raise AssertionError(f"Unhandled provider descriptor: {provider_id}")
+        return factory(config, settings)
 
-    config = build_provider_config(descriptor, settings)
-    factory = PROVIDER_FACTORIES.get(provider_id)
-    if factory is None:
-        raise AssertionError(f"Unhandled provider descriptor: {provider_id}")
-    return factory(config, settings)
+    record = get_custom_provider(provider_id)
+    if record is not None:
+        from providers.custom import create_custom_provider
+
+        config = build_custom_provider_config(record, settings)
+        return create_custom_provider(record, config)
+
+    builtin = "', '".join(PROVIDER_DESCRIPTORS)
+    custom_ids = ", ".join(sorted(load_custom_providers())) or "(none)"
+    raise UnknownProviderTypeError(
+        f"Unknown provider_type: '{provider_id}'. "
+        f"Supported: '{builtin}'. Custom: {custom_ids}"
+    )
 
 
 def _format_provider_query_failures(

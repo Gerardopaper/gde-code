@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from loguru import logger
 
-from config.provider_ids import SUPPORTED_PROVIDER_IDS
+from config.custom_providers import is_known_provider
 from config.settings import Settings
 
 from .gateway_model_ids import decode_gateway_model_id
@@ -88,7 +88,7 @@ class ModelRouter:
     ) -> tuple[str | None, str | None, bool | None]:
         decoded = decode_gateway_model_id(model_name)
         if decoded is not None:
-            if decoded.provider_id not in SUPPORTED_PROVIDER_IDS:
+            if not is_known_provider(decoded.provider_id):
                 return None, None, None
             return (
                 decoded.provider_id,
@@ -99,7 +99,7 @@ class ModelRouter:
         provider_id, separator, provider_model = model_name.partition("/")
         if not separator:
             return None, None, None
-        if provider_id not in SUPPORTED_PROVIDER_IDS:
+        if not is_known_provider(provider_id):
             return None, None, None
         if not provider_model:
             return None, None, None

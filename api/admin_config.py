@@ -12,6 +12,11 @@ from typing import Any, Literal
 from dotenv import dotenv_values
 from pydantic import ValidationError
 
+from config.custom_providers import (
+    CustomProviderRecord,
+    load_custom_providers,
+    save_custom_providers,
+)
 from config.paths import managed_env_path
 from config.provider_catalog import PROVIDER_CATALOG
 from config.settings import Settings
@@ -1099,7 +1104,84 @@ def provider_config_status(
                 "credential_env": descriptor.credential_env,
             }
         )
+
+    statuses.extend(
+        {
+            "provider_id": record.provider_id,
+            "kind": "custom",
+            "status": "configured",
+            "label": record.display_name,
+            "base_url": record.base_url,
+            "protocol": record.protocol,
+            "has_api_key": bool(record.api_key),
+        }
+        for record in load_custom_providers().values()
+    )
     return statuses
+
+
+def _masked_custom_provider(record: CustomProviderRecord) -> dict[str, Any]:
+    """Public-safe view of a custom provider (api_key never returned in clear)."""
+    return {
+        "provider_id": record.provider_id,
+        "display_name": record.display_name,
+        "base_url": record.base_url,
+        "protocol": record.protocol,
+        "api_key": MASKED_SECRET if record.api_key else "",
+        "has_api_key": bool(record.api_key),
+    }
+
+
+def list_custom_providers() -> list[dict[str, Any]]:
+    """Return masked custom provider records for the admin UI."""
+    return [
+        _masked_custom_provider(record) for record in load_custom_providers().values()
+    ]
+
+
+def upsert_custom_provider(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate and create/update a custom provider (id is immutable: it keys the store)."""
+    existing = load_custom_providers()
+    provider_id = str(payload.get("provider_id", "")).strip()
+    incoming_key = payload.get("api_key", "")
+    if incoming_key == MASKED_SECRET:
+        prior = existing.get(provider_id)
+        incoming_key = prior.api_key if prior is not None else ""
+    try:
+        record = CustomProviderRecord.model_validate(
+            {
+                "provider_id": provider_id,
+                "display_name": str(payload.get("display_name", "")),
+                "base_url": str(payload.get("base_url", "")),
+                "api_key": str(incoming_key or ""),
+                "protocol": str(payload.get("protocol", "openai_chat")),
+            }
+        )
+    except ValidationError as exc:
+        return {"applied": False, "errors": _format_validation_errors(exc)}
+
+    merged = dict(existing)
+    merged[record.provider_id] = record
+    save_custom_providers(list(merged.values()))
+    return {
+        "applied": True,
+        "errors": [],
+        "provider": _masked_custom_provider(record),
+    }
+
+
+def delete_custom_provider(provider_id: str) -> dict[str, Any]:
+    """Remove a custom provider by id."""
+    existing = load_custom_providers()
+    if provider_id not in existing:
+        return {
+            "applied": False,
+            "errors": [f"Unknown custom provider: {provider_id}"],
+        }
+    save_custom_providers(
+        [record for pid, record in existing.items() if pid != provider_id]
+    )
+    return {"applied": True, "errors": []}
 
 
 def _value_for_settings_attr(

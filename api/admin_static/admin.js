@@ -29,7 +29,19 @@ const VIEW_GROUPS = [
     sections: ["messaging", "voice"],
     containerId: "messagingSections",
   },
+  {
+    id: "custom_providers",
+    label: "Custom Providers",
+    title: "Custom Providers",
+    sections: [],
+    containerId: "customProviderFormMount",
+  },
 ];
+
+const PROTOCOL_LABELS = {
+  openai_chat: "OpenAI-compatible (Chat Completions)",
+  anthropic_messages: "Anthropic (Messages API)",
+};
 
 const byId = (id) => document.getElementById(id);
 
@@ -103,6 +115,7 @@ async function load() {
   renderNav();
   renderProviders(config.provider_status);
   renderSections(config.sections, config.fields);
+  await loadCustomProviders();
   byId("configPath").textContent = config.paths.managed;
   await validate(false);
   await refreshLocalStatus();
@@ -487,6 +500,225 @@ function showMessage(message, kind = "") {
   area.className = `message-area ${kind}`.trim();
 }
 
+async function loadCustomProviders() {
+  let data;
+  try {
+    data = await api("/admin/api/custom-providers");
+  } catch (error) {
+    showMessage(error.message, "error");
+    return;
+  }
+  renderCustomProviders(data.providers || []);
+}
+
+function renderCustomProviders(providers) {
+  const list = byId("customProviderList");
+  list.innerHTML = "";
+  if (providers.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "provider-meta";
+    empty.textContent = "No custom providers yet.";
+    list.appendChild(empty);
+    return;
+  }
+  providers.forEach((provider) => {
+    const card = document.createElement("article");
+    card.className = "provider-card";
+
+    const title = document.createElement("div");
+    title.className = "provider-title";
+    title.innerHTML = `<strong></strong>`;
+    title.querySelector("strong").textContent = provider.display_name;
+    const pill = document.createElement("span");
+    pill.className = "status-pill neutral";
+    pill.textContent = provider.provider_id;
+    title.appendChild(pill);
+
+    const meta = document.createElement("div");
+    meta.className = "provider-meta";
+    const protocol = PROTOCOL_LABELS[provider.protocol] || provider.protocol;
+    const keyState = provider.has_api_key ? "key set" : "no key";
+    meta.textContent = `${protocol} · ${provider.base_url} · ${keyState}`;
+
+    const actions = document.createElement("div");
+    actions.className = "cp-actions";
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "test-button";
+    edit.textContent = "Edit";
+    edit.addEventListener("click", () => showCustomProviderForm(provider));
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "test-button";
+    del.textContent = "Delete";
+    del.addEventListener("click", () =>
+      deleteCustomProvider(provider.provider_id),
+    );
+    actions.append(edit, del);
+
+    card.append(title, meta, actions);
+    list.appendChild(card);
+  });
+}
+
+function _customProviderField(labelText, input) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "field";
+  const label = document.createElement("label");
+  const span = document.createElement("span");
+  span.textContent = labelText;
+  label.appendChild(span);
+  wrapper.append(label, input);
+  return wrapper;
+}
+
+function showCustomProviderForm(record) {
+  const editing = Boolean(record);
+  const mount = byId("customProviderFormMount");
+  mount.innerHTML = "";
+
+  const form = document.createElement("form");
+  form.className = "settings-section";
+
+  const heading = document.createElement("div");
+  heading.className = "section-heading";
+  const headingInner = document.createElement("div");
+  const headingTitle = document.createElement("h3");
+  headingTitle.textContent = `${editing ? "Edit" : "Add"} custom provider`;
+  const headingHint = document.createElement("p");
+  headingHint.textContent =
+    "Route models with provider_id/model. Provider ID is permanent.";
+  headingInner.append(headingTitle, headingHint);
+  heading.appendChild(headingInner);
+  form.appendChild(heading);
+
+  const grid = document.createElement("div");
+  grid.className = "field-grid";
+
+  const idInput = document.createElement("input");
+  idInput.type = "text";
+  idInput.autocomplete = "off";
+  idInput.placeholder = "my-llm";
+  idInput.value = record ? record.provider_id : "";
+  idInput.disabled = editing;
+
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.autocomplete = "off";
+  nameInput.placeholder = "My LLM";
+  nameInput.value = record ? record.display_name : "";
+
+  const urlInput = document.createElement("input");
+  urlInput.type = "text";
+  urlInput.autocomplete = "off";
+  urlInput.placeholder = "https://api.example.com/v1";
+  urlInput.value = record ? record.base_url : "";
+
+  const keyInput = document.createElement("input");
+  keyInput.type = "password";
+  keyInput.autocomplete = "off";
+  keyInput.placeholder = "sk-... (optional)";
+  keyInput.value = record && record.has_api_key ? MASKED_SECRET : "";
+
+  const protocolInput = document.createElement("select");
+  [
+    ["openai_chat", PROTOCOL_LABELS.openai_chat],
+    ["anthropic_messages", PROTOCOL_LABELS.anthropic_messages],
+  ].forEach(([value, text]) => {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = text;
+    protocolInput.appendChild(opt);
+  });
+  protocolInput.value = record ? record.protocol : "openai_chat";
+
+  grid.append(
+    _customProviderField("Provider ID", idInput),
+    _customProviderField("Display Name", nameInput),
+    _customProviderField("Default Base URL", urlInput),
+    _customProviderField("API Key (optional)", keyInput),
+    _customProviderField("Protocol", protocolInput),
+  );
+  form.appendChild(grid);
+
+  const actions = document.createElement("div");
+  actions.className = "cp-actions";
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "secondary-button";
+  cancel.textContent = "Cancel";
+  cancel.addEventListener("click", () => {
+    mount.innerHTML = "";
+  });
+  const save = document.createElement("button");
+  save.type = "submit";
+  save.className = "primary-button";
+  save.textContent = "Save";
+  actions.append(cancel, save);
+
+  const error = document.createElement("div");
+  error.className = "message-area";
+
+  form.append(actions, error);
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    error.textContent = "";
+    error.className = "message-area";
+    const payload = {
+      provider_id: idInput.value.trim(),
+      display_name: nameInput.value.trim(),
+      base_url: urlInput.value.trim(),
+      api_key: keyInput.value,
+      protocol: protocolInput.value,
+    };
+    let result;
+    try {
+      result = await api("/admin/api/custom-providers", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      error.textContent = err.message;
+      error.className = "message-area error";
+      return;
+    }
+    if (!result.applied) {
+      error.textContent = (result.errors || ["Save failed"]).join("; ");
+      error.className = "message-area error";
+      return;
+    }
+    mount.innerHTML = "";
+    showMessage("Custom provider saved", "ok");
+    await load();
+  });
+
+  mount.appendChild(form);
+  mount.scrollIntoView({ behavior: "smooth" });
+}
+
+async function deleteCustomProvider(providerId) {
+  let result;
+  try {
+    result = await api(
+      `/admin/api/custom-providers/${encodeURIComponent(providerId)}`,
+      { method: "DELETE" },
+    );
+  } catch (error) {
+    showMessage(error.message, "error");
+    return;
+  }
+  if (!result.applied) {
+    showMessage((result.errors || ["Delete failed"]).join("; "), "error");
+    return;
+  }
+  showMessage(`Deleted ${providerId}`, "ok");
+  await load();
+}
+
+byId("customProviderAdd").addEventListener("click", () =>
+  showCustomProviderForm(null),
+);
 byId("validateButton").addEventListener("click", () => validate(true));
 byId("applyButton").addEventListener("click", apply);
 

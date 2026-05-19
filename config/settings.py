@@ -12,6 +12,7 @@ from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .constants import HTTP_CONNECT_TIMEOUT_DEFAULT
+from .custom_providers import is_known_provider
 from .nim import NimSettings
 from .paths import default_claude_workspace_path, managed_env_path
 from .provider_ids import SUPPORTED_PROVIDER_IDS
@@ -425,9 +426,12 @@ class Settings(BaseSettings):
                 f"Format: provider_type/model/name"
             )
         provider = v.split("/", 1)[0]
-        if provider not in SUPPORTED_PROVIDER_IDS:
+        if not is_known_provider(provider):
             supported = ", ".join(f"'{p}'" for p in SUPPORTED_PROVIDER_IDS)
-            raise ValueError(f"Invalid provider: '{provider}'. Supported: {supported}")
+            raise ValueError(
+                f"Invalid provider: '{provider}'. Supported: {supported}. "
+                f"Custom providers must be registered in the custom provider store."
+            )
         return v
 
     @model_validator(mode="after")

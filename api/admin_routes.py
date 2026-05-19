@@ -19,8 +19,11 @@ from providers.registry import ProviderRegistry
 
 from .admin_config import (
     FIELD_BY_KEY,
+    delete_custom_provider,
+    list_custom_providers,
     load_config_response,
     provider_config_status,
+    upsert_custom_provider,
     validate_updates,
     write_managed_env,
 )
@@ -40,6 +43,24 @@ class AdminConfigPayload(BaseModel):
     """Partial config update submitted by the admin UI."""
 
     values: dict[str, Any] = Field(default_factory=dict)
+
+
+class CustomProviderPayload(BaseModel):
+    """Custom provider create/update submitted by the admin UI."""
+
+    provider_id: str = ""
+    display_name: str = ""
+    base_url: str = ""
+    api_key: str = ""
+    protocol: str = "openai_chat"
+
+
+async def _reset_provider_registry(request: Request) -> None:
+    """Rebuild the provider registry so custom-provider edits take effect."""
+    old_registry = getattr(request.app.state, "provider_registry", None)
+    if isinstance(old_registry, ProviderRegistry):
+        await old_registry.cleanup()
+    request.app.state.provider_registry = ProviderRegistry()
 
 
 def _is_loopback_host(host: str | None) -> bool:
@@ -209,6 +230,32 @@ async def refresh_models(request: Request):
             for provider_id, model_ids in registry.cached_model_ids().items()
         }
     }
+
+
+@router.get("/admin/api/custom-providers")
+async def get_custom_providers(request: Request):
+    require_loopback_admin(request)
+    return {"providers": list_custom_providers()}
+
+
+@router.post("/admin/api/custom-providers")
+async def create_or_update_custom_provider(
+    payload: CustomProviderPayload, request: Request
+):
+    require_loopback_admin(request)
+    result = upsert_custom_provider(payload.model_dump())
+    if result["applied"]:
+        await _reset_provider_registry(request)
+    return result
+
+
+@router.delete("/admin/api/custom-providers/{provider_id}")
+async def remove_custom_provider(provider_id: str, request: Request):
+    require_loopback_admin(request)
+    result = delete_custom_provider(provider_id)
+    if result["applied"]:
+        await _reset_provider_registry(request)
+    return result
 
 
 def _filtered_values(values: dict[str, Any]) -> dict[str, Any]:
