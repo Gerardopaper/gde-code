@@ -119,3 +119,56 @@ def test_is_known_provider_covers_builtin_and_custom() -> None:
         ]
     )
     assert cp.is_known_provider("mine") is True
+
+
+def test_custom_provider_model_accepts_realistic_ids() -> None:
+    m = cp.CustomProviderModel(
+        model_id="meta/llama-3.3:8b", display_name="Llama 3.3 8B"
+    )
+    assert m.model_id == "meta/llama-3.3:8b"
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        ("bad space", "OK"),
+        ("", "OK"),
+        ("ok", "   "),
+    ],
+)
+def test_custom_provider_model_validates_inputs(bad: tuple[str, str]) -> None:
+    with pytest.raises(ValidationError):
+        cp.CustomProviderModel(model_id=bad[0], display_name=bad[1])
+
+
+def test_record_dedupes_models_keeping_last_write() -> None:
+    rec = cp.CustomProviderRecord(
+        provider_id="ok",
+        display_name="OK",
+        base_url="http://x",
+        models=[
+            cp.CustomProviderModel(model_id="a", display_name="A1"),
+            cp.CustomProviderModel(model_id="a", display_name="A2"),
+            cp.CustomProviderModel(model_id="b", display_name="B"),
+        ],
+    )
+    assert [m.model_id for m in rec.models] == ["a", "b"]
+    assert rec.models[0].display_name == "A2"
+
+
+def test_save_load_round_trip_preserves_models() -> None:
+    cp.save_custom_providers(
+        [
+            cp.CustomProviderRecord(
+                provider_id="alpha",
+                display_name="A",
+                base_url="http://a",
+                models=[
+                    cp.CustomProviderModel(model_id="m1", display_name="M1"),
+                    cp.CustomProviderModel(model_id="m2", display_name="M2"),
+                ],
+            )
+        ]
+    )
+    loaded = cp.load_custom_providers()
+    assert [m.model_id for m in loaded["alpha"].models] == ["m1", "m2"]

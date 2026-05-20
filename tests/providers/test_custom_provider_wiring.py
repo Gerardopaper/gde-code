@@ -160,3 +160,43 @@ def test_model_router_routes_custom_provider_directly() -> None:
 
     assert resolved.provider_id == "mycustom"
     assert resolved.provider_model == "some-model"
+
+
+@pytest.mark.asyncio
+async def test_generic_openai_uses_manual_models_without_http() -> None:
+    record = cp.CustomProviderRecord(
+        provider_id="m",
+        display_name="M",
+        base_url="https://m/v1",
+        models=[
+            cp.CustomProviderModel(model_id="m1", display_name="M1"),
+            cp.CustomProviderModel(model_id="m2", display_name="M2"),
+        ],
+    )
+    with patch("providers.openai_compat.AsyncOpenAI"):
+        provider = create_custom_provider(
+            record, build_custom_provider_config(record, _settings_mock())
+        )
+    assert isinstance(provider, GenericOpenAIProvider)
+    ids = await provider.list_model_ids()
+    assert ids == frozenset({"m1", "m2"})
+    infos = await provider.list_model_infos()
+    assert {info.model_id for info in infos} == {"m1", "m2"}
+
+
+@pytest.mark.asyncio
+async def test_generic_anthropic_uses_manual_models_without_http() -> None:
+    record = cp.CustomProviderRecord(
+        provider_id="a",
+        display_name="A",
+        base_url="https://a",
+        protocol="anthropic_messages",
+        models=[cp.CustomProviderModel(model_id="claude-x", display_name="CX")],
+    )
+    with patch("httpx.AsyncClient"):
+        provider = create_custom_provider(
+            record, build_custom_provider_config(record, _settings_mock())
+        )
+    assert isinstance(provider, GenericAnthropicProvider)
+    ids = await provider.list_model_ids()
+    assert ids == frozenset({"claude-x"})

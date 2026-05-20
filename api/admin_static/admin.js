@@ -538,7 +538,12 @@ function renderCustomProviders(providers) {
     meta.className = "provider-meta";
     const protocol = PROTOCOL_LABELS[provider.protocol] || provider.protocol;
     const keyState = provider.has_api_key ? "key set" : "no key";
-    meta.textContent = `${protocol} · ${provider.base_url} · ${keyState}`;
+    const modelCount = (provider.models || []).length;
+    const modelsPart =
+      modelCount > 0
+        ? ` · ${modelCount} model${modelCount === 1 ? "" : "s"}`
+        : "";
+    meta.textContent = `${protocol} · ${provider.base_url} · ${keyState}${modelsPart}`;
 
     const actions = document.createElement("div");
     actions.className = "cp-actions";
@@ -641,6 +646,106 @@ function showCustomProviderForm(record) {
   );
   form.appendChild(grid);
 
+  const modelsSection = document.createElement("section");
+  modelsSection.className = "settings-section";
+  const modelsHeading = document.createElement("div");
+  modelsHeading.className = "section-heading";
+  const modelsHeadingInner = document.createElement("div");
+  const modelsTitle = document.createElement("h3");
+  modelsTitle.textContent = "Models";
+  const modelsHint = document.createElement("p");
+  modelsHint.textContent =
+    "Manual model list. Required when the provider does not expose /models.";
+  modelsHeadingInner.append(modelsTitle, modelsHint);
+  modelsHeading.appendChild(modelsHeadingInner);
+  modelsSection.appendChild(modelsHeading);
+
+  const modelsList = document.createElement("div");
+  modelsList.className = "cp-models";
+  modelsSection.appendChild(modelsList);
+
+  function appendModelRow(model) {
+    const row = document.createElement("div");
+    row.className = "cp-model-row";
+
+    const modelIdInput = document.createElement("input");
+    modelIdInput.type = "text";
+    modelIdInput.placeholder = "model id (e.g. gpt-4o)";
+    modelIdInput.className = "cp-model-id";
+    modelIdInput.value = model ? model.model_id : "";
+
+    const modelNameInput = document.createElement("input");
+    modelNameInput.type = "text";
+    modelNameInput.placeholder = "display name (e.g. GPT-4o)";
+    modelNameInput.className = "cp-model-name";
+    modelNameInput.value = model ? model.display_name : "";
+
+    const status = document.createElement("span");
+    status.className = "cp-model-status";
+
+    const testBtn = document.createElement("button");
+    testBtn.type = "button";
+    testBtn.className = "test-button";
+    testBtn.textContent = "Test";
+    testBtn.disabled = !editing;
+    testBtn.title = editing
+      ? "Send a one-token request to verify this model"
+      : "Save provider first, then test";
+    testBtn.addEventListener("click", async () => {
+      const modelId = modelIdInput.value.trim();
+      if (!modelId) {
+        status.textContent = "model id required";
+        status.className = "cp-model-status error";
+        return;
+      }
+      status.textContent = "Testing…";
+      status.className = "cp-model-status";
+      let result;
+      try {
+        result = await api(
+          `/admin/api/custom-providers/${encodeURIComponent(record.provider_id)}/models/test`,
+          {
+            method: "POST",
+            body: JSON.stringify({ model_id: modelId }),
+          },
+        );
+      } catch (err) {
+        status.textContent = err.message;
+        status.className = "cp-model-status error";
+        return;
+      }
+      if (result.ok) {
+        status.textContent = `OK (${result.model || modelId})`;
+        status.className = "cp-model-status ok";
+      } else {
+        const summary = result.message || result.error_type || "failed";
+        status.textContent = `${result.error_type || "Error"}: ${summary}`;
+        status.className = "cp-model-status error";
+      }
+    });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "test-button";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", () => {
+      row.remove();
+    });
+
+    row.append(modelIdInput, modelNameInput, status, testBtn, removeBtn);
+    modelsList.appendChild(row);
+  }
+
+  (record && record.models ? record.models : []).forEach(appendModelRow);
+
+  const addModelBtn = document.createElement("button");
+  addModelBtn.type = "button";
+  addModelBtn.className = "secondary-button";
+  addModelBtn.textContent = "+ Add model";
+  addModelBtn.addEventListener("click", () => appendModelRow(null));
+  modelsSection.appendChild(addModelBtn);
+  form.appendChild(modelsSection);
+
   const actions = document.createElement("div");
   actions.className = "cp-actions";
   const cancel = document.createElement("button");
@@ -665,12 +770,19 @@ function showCustomProviderForm(record) {
     event.preventDefault();
     error.textContent = "";
     error.className = "message-area";
+    const models = Array.from(modelsList.querySelectorAll(".cp-model-row"))
+      .map((row) => ({
+        model_id: row.querySelector(".cp-model-id").value.trim(),
+        display_name: row.querySelector(".cp-model-name").value.trim(),
+      }))
+      .filter((m) => m.model_id || m.display_name);
     const payload = {
       provider_id: idInput.value.trim(),
       display_name: nameInput.value.trim(),
       base_url: urlInput.value.trim(),
       api_key: keyInput.value,
       protocol: protocolInput.value,
+      models,
     };
     let result;
     try {

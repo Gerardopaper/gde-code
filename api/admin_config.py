@@ -1129,6 +1129,10 @@ def _masked_custom_provider(record: CustomProviderRecord) -> dict[str, Any]:
         "protocol": record.protocol,
         "api_key": MASKED_SECRET if record.api_key else "",
         "has_api_key": bool(record.api_key),
+        "models": [
+            {"model_id": model.model_id, "display_name": model.display_name}
+            for model in record.models
+        ],
     }
 
 
@@ -1147,6 +1151,9 @@ def upsert_custom_provider(payload: Mapping[str, Any]) -> dict[str, Any]:
     if incoming_key == MASKED_SECRET:
         prior = existing.get(provider_id)
         incoming_key = prior.api_key if prior is not None else ""
+    raw_models = payload.get("models", [])
+    if not isinstance(raw_models, list):
+        raw_models = []
     try:
         record = CustomProviderRecord.model_validate(
             {
@@ -1155,6 +1162,7 @@ def upsert_custom_provider(payload: Mapping[str, Any]) -> dict[str, Any]:
                 "base_url": str(payload.get("base_url", "")),
                 "api_key": str(incoming_key or ""),
                 "protocol": str(payload.get("protocol", "openai_chat")),
+                "models": raw_models,
             }
         )
     except ValidationError as exc:

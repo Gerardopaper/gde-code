@@ -53,6 +53,13 @@ class CustomProviderPayload(BaseModel):
     base_url: str = ""
     api_key: str = ""
     protocol: str = "openai_chat"
+    models: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class CustomProviderModelTestPayload(BaseModel):
+    """Test-connection request body for a single custom-provider model."""
+
+    model_id: str = ""
 
 
 async def _reset_provider_registry(request: Request) -> None:
@@ -256,6 +263,58 @@ async def remove_custom_provider(provider_id: str, request: Request):
     if result["applied"]:
         await _reset_provider_registry(request)
     return result
+
+
+@router.post("/admin/api/custom-providers/{provider_id}/models/test")
+async def test_custom_provider_model(
+    provider_id: str,
+    payload: CustomProviderModelTestPayload,
+    request: Request,
+):
+    require_loopback_admin(request)
+    model_id = payload.model_id.strip()
+    if not model_id:
+        return {
+            "ok": False,
+            "provider_id": provider_id,
+            "error_type": "ValueError",
+            "message": "model_id is required",
+        }
+    settings = get_cached_settings()
+    registry = getattr(request.app.state, "provider_registry", None)
+    if not isinstance(registry, ProviderRegistry):
+        registry = ProviderRegistry()
+        request.app.state.provider_registry = registry
+    try:
+        provider = registry.get(provider_id, settings)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "provider_id": provider_id,
+            "model_id": model_id,
+            "error_type": type(exc).__name__,
+            "message": str(exc),
+        }
+    test = getattr(provider, "test_chat", None)
+    if not callable(test):
+        return {
+            "ok": False,
+            "provider_id": provider_id,
+            "model_id": model_id,
+            "error_type": "NotSupported",
+            "message": "Provider does not expose a test endpoint",
+        }
+    try:
+        result = await test(model_id)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "provider_id": provider_id,
+            "model_id": model_id,
+            "error_type": type(exc).__name__,
+            "message": str(exc),
+        }
+    return {"provider_id": provider_id, "model_id": model_id, **result}
 
 
 def _filtered_values(values: dict[str, Any]) -> dict[str, Any]:

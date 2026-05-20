@@ -15,7 +15,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from .paths import custom_providers_path
 from .provider_ids import SUPPORTED_PROVIDER_IDS
@@ -23,6 +23,33 @@ from .provider_ids import SUPPORTED_PROVIDER_IDS
 CustomProviderProtocol = Literal["openai_chat", "anthropic_messages"]
 
 PROVIDER_ID_PATTERN = re.compile(r"^[a-z0-9_-]+$")
+MODEL_ID_PATTERN = re.compile(r"^[A-Za-z0-9._/:\-]+$")
+
+
+class CustomProviderModel(BaseModel):
+    """A model entry under a custom provider (manual model catalog)."""
+
+    model_id: str
+    display_name: str
+
+    @field_validator("model_id")
+    @classmethod
+    def _validate_model_id(cls, value: str) -> str:
+        value = value.strip()
+        if not MODEL_ID_PATTERN.fullmatch(value):
+            raise ValueError(
+                "model_id must use only letters, digits, hyphens, underscores, "
+                "dots, colons, or slashes"
+            )
+        return value
+
+    @field_validator("display_name")
+    @classmethod
+    def _validate_display_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("display_name must not be empty")
+        return value
 
 
 class CustomProviderRecord(BaseModel):
@@ -37,6 +64,15 @@ class CustomProviderRecord(BaseModel):
     base_url: str
     api_key: str = ""
     protocol: CustomProviderProtocol = "openai_chat"
+    models: list[CustomProviderModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _dedupe_models(self) -> CustomProviderRecord:
+        seen: dict[str, CustomProviderModel] = {}
+        for model in self.models:
+            seen[model.model_id] = model
+        self.models = list(seen.values())
+        return self
 
     @field_validator("provider_id")
     @classmethod

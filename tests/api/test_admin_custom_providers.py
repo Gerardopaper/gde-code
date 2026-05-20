@@ -132,3 +132,155 @@ def test_admin_ui_exposes_custom_providers_view():
     assert 'id="customProviderAdd"' in index_html
     assert "loadCustomProviders" in admin_js
     assert "/admin/api/custom-providers" in admin_js
+    assert "cp-model-row" in admin_js
+    assert "+ Add model" in admin_js
+
+
+def test_upsert_with_models_persists_them():
+    client = _local_client(_app())
+    body = client.post(
+        "/admin/api/custom-providers",
+        json=_payload(
+            models=[
+                {"model_id": "gpt-4o", "display_name": "GPT-4o"},
+                {"model_id": "gpt-4o-mini", "display_name": "GPT-4o Mini"},
+            ]
+        ),
+    ).json()
+    assert body["applied"] is True
+    assert [m["model_id"] for m in body["provider"]["models"]] == [
+        "gpt-4o",
+        "gpt-4o-mini",
+    ]
+
+    listed = client.get("/admin/api/custom-providers").json()["providers"][0]
+    assert [m["display_name"] for m in listed["models"]] == ["GPT-4o", "GPT-4o Mini"]
+
+
+def test_invalid_model_id_in_upsert_rejected():
+    client = _local_client(_app())
+    body = client.post(
+        "/admin/api/custom-providers",
+        json=_payload(
+            models=[{"model_id": "bad space", "display_name": "Bad"}],
+        ),
+    ).json()
+    assert body["applied"] is False
+    assert body["errors"]
+
+
+def _install_mock_provider(app, provider_id, **mock_attrs):
+    from unittest.mock import MagicMock
+
+    from providers.registry import ProviderRegistry
+
+    provider = MagicMock(spec=list(mock_attrs))
+    for key, value in mock_attrs.items():
+        setattr(provider, key, value)
+    app.state.provider_registry = ProviderRegistry({provider_id: provider})
+    return provider
+
+
+def test_test_connection_success_returns_provider_response():
+    from unittest.mock import AsyncMock
+
+    app = _app()
+    mock = _install_mock_provider(
+        app,
+        "my-llm",
+        test_chat=AsyncMock(
+            return_value={"ok": True, "model": "gpt-4o", "response_id": "r1"}
+        ),
+    )
+
+    body = (
+        _local_client(app)
+        .post(
+            "/admin/api/custom-providers/my-llm/models/test",
+            json={"model_id": "gpt-4o"},
+        )
+        .json()
+    )
+    assert body == {
+        "ok": True,
+        "provider_id": "my-llm",
+        "model_id": "gpt-4o",
+        "model": "gpt-4o",
+        "response_id": "r1",
+    }
+    mock.test_chat.assert_awaited_once_with("gpt-4o")
+
+
+def test_test_connection_reports_provider_exception():
+    from unittest.mock import AsyncMock
+
+    app = _app()
+    _install_mock_provider(
+        app,
+        "my-llm",
+        test_chat=AsyncMock(side_effect=RuntimeError("network down")),
+    )
+    body = (
+        _local_client(app)
+        .post(
+            "/admin/api/custom-providers/my-llm/models/test",
+            json={"model_id": "gpt-4o"},
+        )
+        .json()
+    )
+    assert body["ok"] is False
+    assert body["error_type"] == "RuntimeError"
+    assert "network down" in body["message"]
+
+
+def test_test_connection_requires_model_id():
+    body = (
+        _local_client(_app())
+        .post(
+            "/admin/api/custom-providers/my-llm/models/test",
+            json={"model_id": ""},
+        )
+        .json()
+    )
+    assert body["ok"] is False
+    assert body["error_type"] == "ValueError"
+
+
+def test_test_connection_unknown_provider_returns_error():
+    body = (
+        _local_client(_app())
+        .post(
+            "/admin/api/custom-providers/missing/models/test",
+            json={"model_id": "x"},
+        )
+        .json()
+    )
+    assert body["ok"] is False
+    assert body["error_type"] == "UnknownProviderTypeError"
+
+
+def test_test_connection_unsupported_provider_returns_not_supported():
+    app = _app()
+    _install_mock_provider(app, "my-llm")  # no test_chat attr in spec
+    body = (
+        _local_client(app)
+        .post(
+            "/admin/api/custom-providers/my-llm/models/test",
+            json={"model_id": "x"},
+        )
+        .json()
+    )
+    assert body["ok"] is False
+    assert body["error_type"] == "NotSupported"
+
+
+def test_test_connection_endpoint_loopback_only():
+    app = _app()
+    remote = TestClient(app, client=("203.0.113.10", 50000))
+    assert (
+        remote.post(
+            "/admin/api/custom-providers/my-llm/models/test",
+            json={"model_id": "x"},
+        ).status_code
+        == 403
+    )

@@ -464,3 +464,36 @@ textarea {
   margin-top: 0.75rem;
   flex-wrap: wrap;
 }
+
+.cp-models {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.cp-model-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cp-model-row .cp-model-id,
+.cp-model-row .cp-model-name {
+  flex: 1 1 12rem;
+  min-width: 8rem;
+}
+
+.cp-model-status {
+  font-size: 0.85em;
+  min-width: 6rem;
+}
+
+.cp-model-status.ok {
+  color: #16a34a;
+}
+
+.cp-model-status.error {
+  color: #b91c1c;
+}
