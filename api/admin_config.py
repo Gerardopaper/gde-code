@@ -1133,6 +1133,8 @@ def _masked_custom_provider(record: CustomProviderRecord) -> dict[str, Any]:
             {"model_id": model.model_id, "display_name": model.display_name}
             for model in record.models
         ],
+        "bypass_system_proxy": record.bypass_system_proxy,
+        "verify_tls": record.verify_tls,
     }
 
 
@@ -1163,6 +1165,8 @@ def upsert_custom_provider(payload: Mapping[str, Any]) -> dict[str, Any]:
                 "api_key": str(incoming_key or ""),
                 "protocol": str(payload.get("protocol", "openai_chat")),
                 "models": raw_models,
+                "bypass_system_proxy": bool(payload.get("bypass_system_proxy", False)),
+                "verify_tls": bool(payload.get("verify_tls", True)),
             }
         )
     except ValidationError as exc:

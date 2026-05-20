@@ -70,6 +70,7 @@ class AnthropicMessagesTransport(BaseProvider):
         *,
         provider_name: str,
         default_base_url: str,
+        http_client: httpx.AsyncClient | None = None,
     ):
         super().__init__(config)
         self._provider_name = provider_name
@@ -81,16 +82,18 @@ class AnthropicMessagesTransport(BaseProvider):
             rate_window=config.rate_window,
             max_concurrency=config.max_concurrency,
         )
-        self._client = httpx.AsyncClient(
-            base_url=self._base_url,
-            proxy=config.proxy or None,
-            timeout=httpx.Timeout(
-                config.http_read_timeout,
-                connect=config.http_connect_timeout,
-                read=config.http_read_timeout,
-                write=config.http_write_timeout,
-            ),
-        )
+        if http_client is None:
+            http_client = httpx.AsyncClient(
+                base_url=self._base_url,
+                proxy=config.proxy or None,
+                timeout=httpx.Timeout(
+                    config.http_read_timeout,
+                    connect=config.http_connect_timeout,
+                    read=config.http_read_timeout,
+                    write=config.http_write_timeout,
+                ),
+            )
+        self._client = http_client
 
     async def cleanup(self) -> None:
         """Release HTTP client resources."""

@@ -54,6 +54,8 @@ class CustomProviderPayload(BaseModel):
     api_key: str = ""
     protocol: str = "openai_chat"
     models: list[dict[str, Any]] = Field(default_factory=list)
+    bypass_system_proxy: bool = False
+    verify_tls: bool = True
 
 
 class CustomProviderModelTestPayload(BaseModel):

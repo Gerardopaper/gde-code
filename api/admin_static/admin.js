@@ -637,12 +637,22 @@ function showCustomProviderForm(record) {
   });
   protocolInput.value = record ? record.protocol : "openai_chat";
 
+  const bypassProxyInput = document.createElement("input");
+  bypassProxyInput.type = "checkbox";
+  bypassProxyInput.checked = Boolean(record && record.bypass_system_proxy);
+
+  const verifyTlsInput = document.createElement("input");
+  verifyTlsInput.type = "checkbox";
+  verifyTlsInput.checked = record ? record.verify_tls !== false : true;
+
   grid.append(
     _customProviderField("Provider ID", idInput),
     _customProviderField("Display Name", nameInput),
     _customProviderField("Default Base URL", urlInput),
     _customProviderField("API Key (optional)", keyInput),
     _customProviderField("Protocol", protocolInput),
+    _customProviderField("Bypass system proxy", bypassProxyInput),
+    _customProviderField("Verify TLS (uncheck for lab self-signed)", verifyTlsInput),
   );
   form.appendChild(grid);
 
@@ -783,6 +793,8 @@ function showCustomProviderForm(record) {
       api_key: keyInput.value,
       protocol: protocolInput.value,
       models,
+      bypass_system_proxy: bypassProxyInput.checked,
+      verify_tls: verifyTlsInput.checked,
     };
     let result;
     try {

@@ -9,13 +9,19 @@ transport base classes:
 
 A custom provider may carry a manual model catalog. When present, the generic
 provider uses it for model listing instead of calling the upstream ``/models``
-endpoint (some private gateways don't expose one).
+endpoint (some private gateways don't expose one). Two transport toggles are
+also threaded through, primarily for private/lab networks:
+
+* ``bypass_system_proxy`` -> ``httpx.AsyncClient(trust_env=False)``
+* ``verify_tls=False``    -> ``httpx.AsyncClient(verify=False)``
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterable
 from typing import Any
+
+import httpx
 
 from config.custom_providers import CustomProviderModel, CustomProviderRecord
 from core.anthropic import ReasoningReplayMode, build_base_request_body
@@ -38,6 +44,48 @@ def _manual_model_infos(
     )
 
 
+def _custom_timeout(config: ProviderConfig) -> httpx.Timeout:
+    return httpx.Timeout(
+        config.http_read_timeout,
+        connect=config.http_connect_timeout,
+        read=config.http_read_timeout,
+        write=config.http_write_timeout,
+    )
+
+
+def _build_custom_http_client(
+    config: ProviderConfig,
+    *,
+    bypass_system_proxy: bool,
+    verify_tls: bool,
+    base_url: str | None = None,
+) -> httpx.AsyncClient | None:
+    """Return an httpx client honoring the custom-provider toggles.
+
+    Returns ``None`` when no non-default behavior is requested *and* no base_url
+    is required (lets the parent transport build its default client).
+    """
+    needs_custom = (
+        bypass_system_proxy
+        or not verify_tls
+        or bool(config.proxy)
+        or base_url is not None
+    )
+    if not needs_custom:
+        return None
+
+    kwargs: dict[str, Any] = {
+        "timeout": _custom_timeout(config),
+        "trust_env": not bypass_system_proxy,
+        "verify": verify_tls,
+    }
+    if config.proxy:
+        kwargs["proxy"] = config.proxy
+    if base_url is not None:
+        kwargs["base_url"] = base_url
+    return httpx.AsyncClient(**kwargs)
+
+
 class GenericOpenAIProvider(OpenAIChatTransport):
     """OpenAI-compatible Chat Completions adapter for a custom provider."""
 
@@ -48,12 +96,20 @@ class GenericOpenAIProvider(OpenAIChatTransport):
         provider_name: str,
         base_url: str,
         models: Iterable[CustomProviderModel] = (),
+        bypass_system_proxy: bool = False,
+        verify_tls: bool = True,
     ) -> None:
+        http_client = _build_custom_http_client(
+            config,
+            bypass_system_proxy=bypass_system_proxy,
+            verify_tls=verify_tls,
+        )
         super().__init__(
             config,
             provider_name=provider_name,
             base_url=base_url,
             api_key=config.api_key,
+            http_client=http_client,
         )
         self._manual_models: tuple[CustomProviderModel, ...] = tuple(models)
 
@@ -107,11 +163,21 @@ class GenericAnthropicProvider(AnthropicMessagesTransport):
         provider_name: str,
         default_base_url: str,
         models: Iterable[CustomProviderModel] = (),
+        bypass_system_proxy: bool = False,
+        verify_tls: bool = True,
     ) -> None:
+        resolved_base_url = (config.base_url or default_base_url).rstrip("/")
+        http_client = _build_custom_http_client(
+            config,
+            bypass_system_proxy=bypass_system_proxy,
+            verify_tls=verify_tls,
+            base_url=resolved_base_url,
+        )
         super().__init__(
             config,
             provider_name=provider_name,
             default_base_url=default_base_url,
+            http_client=http_client,
         )
         self._manual_models: tuple[CustomProviderModel, ...] = tuple(models)
 
@@ -180,10 +246,14 @@ def create_custom_provider(
             provider_name=record.provider_id,
             default_base_url=record.base_url,
             models=record.models,
+            bypass_system_proxy=record.bypass_system_proxy,
+            verify_tls=record.verify_tls,
         )
     return GenericOpenAIProvider(
         config,
         provider_name=record.provider_id,
         base_url=config.base_url or record.base_url,
         models=record.models,
+        bypass_system_proxy=record.bypass_system_proxy,
+        verify_tls=record.verify_tls,
     )

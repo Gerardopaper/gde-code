@@ -134,6 +134,31 @@ def test_admin_ui_exposes_custom_providers_view():
     assert "/admin/api/custom-providers" in admin_js
     assert "cp-model-row" in admin_js
     assert "+ Add model" in admin_js
+    assert "Bypass system proxy" in admin_js
+    assert "Verify TLS" in admin_js
+
+
+def test_upsert_persists_transport_toggles():
+    client = _local_client(_app())
+    body = client.post(
+        "/admin/api/custom-providers",
+        json=_payload(bypass_system_proxy=True, verify_tls=False),
+    ).json()
+    assert body["applied"] is True
+    assert body["provider"]["bypass_system_proxy"] is True
+    assert body["provider"]["verify_tls"] is False
+
+    listed = client.get("/admin/api/custom-providers").json()["providers"][0]
+    assert listed["bypass_system_proxy"] is True
+    assert listed["verify_tls"] is False
+
+
+def test_upsert_defaults_transport_toggles_when_absent():
+    client = _local_client(_app())
+    body = client.post("/admin/api/custom-providers", json=_payload()).json()
+    assert body["applied"] is True
+    assert body["provider"]["bypass_system_proxy"] is False
+    assert body["provider"]["verify_tls"] is True
 
 
 def test_upsert_with_models_persists_them():

@@ -65,6 +65,8 @@ class CustomProviderRecord(BaseModel):
     api_key: str = ""
     protocol: CustomProviderProtocol = "openai_chat"
     models: list[CustomProviderModel] = Field(default_factory=list)
+    bypass_system_proxy: bool = False
+    verify_tls: bool = True
 
     @model_validator(mode="after")
     def _dedupe_models(self) -> CustomProviderRecord:

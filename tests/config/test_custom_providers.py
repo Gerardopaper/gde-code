@@ -172,3 +172,28 @@ def test_save_load_round_trip_preserves_models() -> None:
     )
     loaded = cp.load_custom_providers()
     assert [m.model_id for m in loaded["alpha"].models] == ["m1", "m2"]
+
+
+def test_record_defaults_for_transport_toggles() -> None:
+    record = cp.CustomProviderRecord(
+        provider_id="ok", display_name="OK", base_url="http://x"
+    )
+    assert record.bypass_system_proxy is False
+    assert record.verify_tls is True
+
+
+def test_save_load_round_trip_preserves_transport_toggles() -> None:
+    cp.save_custom_providers(
+        [
+            cp.CustomProviderRecord(
+                provider_id="a",
+                display_name="A",
+                base_url="http://a",
+                bypass_system_proxy=True,
+                verify_tls=False,
+            )
+        ]
+    )
+    loaded = cp.load_custom_providers()
+    assert loaded["a"].bypass_system_proxy is True
+    assert loaded["a"].verify_tls is False

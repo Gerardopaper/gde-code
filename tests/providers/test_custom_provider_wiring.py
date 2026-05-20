@@ -200,3 +200,59 @@ async def test_generic_anthropic_uses_manual_models_without_http() -> None:
     assert isinstance(provider, GenericAnthropicProvider)
     ids = await provider.list_model_ids()
     assert ids == frozenset({"claude-x"})
+
+
+def test_generic_openai_threads_toggles_into_httpx_client() -> None:
+    record = cp.CustomProviderRecord(
+        provider_id="x",
+        display_name="X",
+        base_url="https://x/v1",
+        bypass_system_proxy=True,
+        verify_tls=False,
+    )
+    with (
+        patch("providers.custom.httpx.AsyncClient") as mock_client,
+        patch("providers.openai_compat.AsyncOpenAI"),
+    ):
+        create_custom_provider(
+            record, build_custom_provider_config(record, _settings_mock())
+        )
+    mock_client.assert_called_once()
+    kwargs = mock_client.call_args.kwargs
+    assert kwargs["trust_env"] is False
+    assert kwargs["verify"] is False
+    assert "base_url" not in kwargs  # OpenAI SDK manages its own base_url
+
+
+def test_generic_openai_skips_custom_client_when_defaults() -> None:
+    record = cp.CustomProviderRecord(
+        provider_id="x", display_name="X", base_url="https://x/v1"
+    )
+    with (
+        patch("providers.custom.httpx.AsyncClient") as mock_client,
+        patch("providers.openai_compat.AsyncOpenAI"),
+    ):
+        create_custom_provider(
+            record, build_custom_provider_config(record, _settings_mock())
+        )
+    mock_client.assert_not_called()
+
+
+def test_generic_anthropic_threads_toggles_into_httpx_client() -> None:
+    record = cp.CustomProviderRecord(
+        provider_id="a",
+        display_name="A",
+        base_url="https://a",
+        protocol="anthropic_messages",
+        bypass_system_proxy=True,
+        verify_tls=False,
+    )
+    with patch("providers.custom.httpx.AsyncClient") as mock_client:
+        create_custom_provider(
+            record, build_custom_provider_config(record, _settings_mock())
+        )
+    mock_client.assert_called_once()
+    kwargs = mock_client.call_args.kwargs
+    assert kwargs["trust_env"] is False
+    assert kwargs["verify"] is False
+    assert kwargs["base_url"] == "https://a"
